@@ -1,0 +1,26 @@
+Task ID,Task Name,Segment,Category,Owner,Reviewer,Workday Due,Actual Completion Day,Status,Priority,Dependency,Control Type,Comments
+T01,Subledger feed cutoff & completeness check (Oracle on-prem to Cloud bridge),Corporate & Other,Systems & Data,Nora Kim,Tom Hughes (Asst. Controller),-2,-2,Complete,High,,Preventive,All 14 feeds received; 2 re-sent after cutover window.
+T02,Card Member billing cycle cutoff confirmation,U.S. Consumer Services,Revenue,Ava Patel,Rahul Mehta (Rev. Accounting Mgr),-2,-2,Complete,High,T01,Preventive,
+T03,Net card fees revenue recognition – annual fee deferral & amortisation,U.S. Consumer Services,Revenue,Ava Patel,Rahul Mehta (Rev. Accounting Mgr),1,1,Complete,High,T02,Detective,Deferred fee rollforward tied to subledger.
+T04,Net card fees revenue recognition – corporate & small business cards,Commercial Services,Revenue,Marcus Reyes,Rahul Mehta (Rev. Accounting Mgr),1,1,Complete,High,T02,Detective,
+T05,Net card fees revenue recognition – international portfolios (multi-currency),International Card Services,Revenue,Lena Chen,Rahul Mehta (Rev. Accounting Mgr),1,,Delayed,High,T01,Detective,Month-end FX rate table not yet loaded into Cloud GL; revised ETA WD+3.
+T06,Discount revenue accrual – merchant settlement cutoff,Global Merchant and Network Services,Revenue,Daniel Okafor,Rahul Mehta (Rev. Accounting Mgr),1,1,Complete,High,T01,Detective,
+T07,Network partner / interchange settlement reconciliation,Global Merchant and Network Services,Reconciliation,Daniel Okafor,Elena Brooks (Balance Sheet Mgr),2,,In Progress,High,T06,Detective,3 of 5 partner statements reconciled.
+T08,Card Member rewards liability accrual – consumer programme,U.S. Consumer Services,Accruals,Sofia Martins,Tom Hughes (Asst. Controller),1,2,Complete,High,T02,Detective,Completed 1 day late; redemption-rate assumption refreshed.
+T09,Card Member rewards liability accrual – international programmes,International Card Services,Accruals,Sofia Martins,Tom Hughes (Asst. Controller),2,,In Progress,High,T05,Detective,
+T10,Credit loss reserve true-up – consumer card receivables & loans,U.S. Consumer Services,Reserves,James Whitaker,Tom Hughes (Asst. Controller),2,,In Progress,High,T02,Detective,Awaiting final model sign-off from Credit Risk.
+T11,Credit loss reserve true-up – commercial card receivables,Commercial Services,Reserves,James Whitaker,Tom Hughes (Asst. Controller),1,,Delayed,High,T04,Detective,Model run re-performed after data mapping issue in Cloud.
+T12,Service fees and other revenue – FX conversion & delinquency fee accrual,International Card Services,Revenue,Lena Chen,Rahul Mehta (Rev. Accounting Mgr),2,2,Complete,Medium,T01,Detective,
+T13,Interest income & interest expense accrual (net interest income),Corporate & Other,Accruals,Marcus Reyes,Elena Brooks (Balance Sheet Mgr),1,1,Complete,High,T01,Detective,
+T14,Intercompany reconciliation – GMNS vs card-issuing segments,Corporate & Other,Intercompany,Nora Kim,Elena Brooks (Balance Sheet Mgr),1,,Delayed,High,T06,Detective,Intercompany counterparty mapping gap in new Cloud module.
+T15,Intercompany elimination journal entries,Corporate & Other,Intercompany,Nora Kim,Elena Brooks (Balance Sheet Mgr),3,,Not Started,High,T14,Preventive,Blocked by T14.
+T16,Bank reconciliations – operating & payroll accounts,Commercial Services,Reconciliation,Marcus Reyes,Elena Brooks (Balance Sheet Mgr),1,1,Complete,Medium,,Detective,
+T17,Bank reconciliations – merchant settlement accounts,Global Merchant and Network Services,Reconciliation,Daniel Okafor,Elena Brooks (Balance Sheet Mgr),1,,Delayed,High,T06,Detective,Unreconciled break under investigation with Treasury (fictional).
+T18,Prepaid expense amortisation – marketing & software licences,Commercial Services,Amortisation,Marcus Reyes,Elena Brooks (Balance Sheet Mgr),-1,-1,Complete,Low,,Detective,
+T19,Card Member services & marketing expense accrual,U.S. Consumer Services,Accruals,Sofia Martins,Tom Hughes (Asst. Controller),1,0,Complete,Medium,,Detective,
+T20,Manual journal entry review & approval (four-eyes check),Corporate & Other,Journal Entries,James Whitaker,Tom Hughes (Asst. Controller),3,,In Progress,High,,Preventive,Manual JE volume up ~30% during Cloud cutover (fictional).
+T21,Capitalised software depreciation run,Global Merchant and Network Services,Amortisation,Nora Kim,Elena Brooks (Balance Sheet Mgr),-1,-1,Complete,Low,,Preventive,
+T22,Balance sheet account reconciliation certification,Corporate & Other,Reconciliation,Ava Patel,Elena Brooks (Balance Sheet Mgr),3,,In Progress,Medium,T16,Detective,
+T23,Flux analysis – USCS & CS segment results vs prior month and forecast,Commercial Services,Analytics,Lena Chen,Tom Hughes (Asst. Controller),4,,Not Started,Medium,T03,Detective,
+T24,Flux analysis – ICS & GMNS segment results vs prior month and forecast,International Card Services,Analytics,Lena Chen,Tom Hughes (Asst. Controller),4,,Not Started,Medium,T05,Detective,
+T25,Controller review & close sign-off,Corporate & Other,Review & Sign-off,James Whitaker,Claire Thompson (Controller),5,,Not Started,High,T23,Preventive,Final sign-off pack due WD+5.

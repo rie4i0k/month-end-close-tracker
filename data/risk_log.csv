@@ -1,0 +1,9 @@
+Risk ID,Description,Impact,Likelihood,Owner,Mitigation,Status
+R01,Late subledger feeds from on-prem systems during Oracle Cloud cutover,H,H,Nora Kim,Daily feed-status call WD-3 to WD+1; fallback manual upload template pre-approved.,Open
+R02,"Manual journal entry volume rises during transition, raising error risk",H,M,James Whitaker,Tiered JE approval thresholds; reviewer sample of 100% for entries above limit.,Open
+R03,Reconciliation breaks between Cloud GL and legacy subledgers,M,H,Elena Brooks,Parallel run of key reconciliations for two closes; break log with ageing.,Open
+R04,Oracle Cloud cutover window overlaps with WD-1 to WD+1 close activities,H,M,Tom Hughes,Cutover freeze calendar agreed with IT; go/no-go checkpoint at WD-5.,Monitoring
+R05,"Month-end FX rate table loaded late, delaying international revenue entries",M,M,Lena Chen,Automate rate load; manual override procedure with Treasury sign-off.,Open
+R06,Credit loss reserve model inputs not final by WD+1,H,L,James Whitaker,Agreed model-run timetable with Credit Risk; preliminary estimate booked if late.,Monitoring
+R07,Key-person dependency on intercompany process owner,M,L,Nora Kim,Cross-train backup preparer; documented desk procedures.,Open
+R08,Rewards redemption-rate assumptions stale after programme change,L,M,Sofia Martins,Quarterly assumption review with Loyalty team; flux threshold alert.,Closed
