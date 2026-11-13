@@ -1,0 +1,15 @@
+Milestone ID,Phase,Milestone,Stakeholder,Owner,Planned Date,Forecast Date,Status,Comments
+M01,Fit-Gap,GL requirements signed off by process owners,Process Owner,Claire Thompson (Controller),2026-03-13,2026-03-13,Complete,45 GL and close requirements baselined.
+M02,Fit-Gap,Fit-gap report approved,Product Owner,Hannah Weiss (ERP Product Owner),2026-04-03,2026-04-08,Complete,Approved 3 business days late after a design-authority review.
+M03,Design,Chart of accounts design approved,Process Owner,Claire Thompson (Controller),2026-05-15,2026-05-15,Complete,5-segment COA with line of business as a balancing segment.
+M04,Design,Intercompany and allocation design approved,Product Owner,Hannah Weiss (ERP Product Owner),2026-06-05,2026-06-03,Complete,
+M05,Data Migration,Mock data load 1 reconciled,System Integrator,Grace Lin (SI Lead),2026-07-17,2026-07-24,Complete,Reconciled after mapping fixes for 6 legacy accounts.
+M06,Data Migration,Mock data load 2 reconciled,System Integrator,Grace Lin (SI Lead),2026-11-06,2026-11-20,At Risk,Two subledger extracts arrived late from on-prem; reload scheduled.
+M07,System Configuration,Ledger and accounting calendar configured,Technology,Owen Park (Finance Systems Lead),2026-08-28,2026-08-26,Complete,
+M08,System Configuration,Journal approval workflow configured,Technology,Owen Park (Finance Systems Lead),2026-11-13,2026-11-17,At Risk,Approval hierarchy waiting on updated HR position data.
+M09,System Configuration,Intercompany balancing and cross-validation rules configured,Technology,Owen Park (Finance Systems Lead),2026-11-20,2026-11-20,On Track,
+M10,Testing (SIT),SIT complete,System Integrator,Grace Lin (SI Lead),2026-12-11,2026-12-16,At Risk,Start depends on mock data load 2; 5-day slip forecast.
+M11,Testing (UAT),UAT sign-off by process owners,Process Owner,Claire Thompson (Controller),2027-01-15,2027-01-15,On Track,"Test scripts drafted for close, intercompany and reporting."
+M12,Go-Live,Cutover plan approved,Product Owner,Hannah Weiss (ERP Product Owner),2027-01-22,2027-01-22,On Track,Go/no-go criteria agreed with the Controller.
+M13,Go-Live,First close in Oracle Cloud,Process Owner,Claire Thompson (Controller),2027-02-08,2027-02-08,On Track,"January 2027 close, WD+5 sign-off."
+M14,Post Go-Live Support,Hypercare issues closed,System Integrator,Grace Lin (SI Lead),2027-03-12,2027-03-12,On Track,Six-week hypercare window.

@@ -17,6 +17,7 @@ See the "About & Sources" sheet / README for the citation.
 Outputs:
   data/close_tasks.csv
   data/risk_log.csv
+  data/milestones.csv          (Oracle on-prem to Cloud migration programme)
   data/reference_structure.csv
 """
 
@@ -113,6 +114,58 @@ RISKS = [
     ("R08", "Rewards redemption-rate assumptions stale after programme change", "L", "M", "Sofia Martins", "Quarterly assumption review with Loyalty team; flux threshold alert.", "Closed"),
 ]
 
+# Risks that threaten a migration milestone (risk -> milestone ID)
+RISK_LINKS = {"R01": "M06", "R03": "M10", "R04": "M12"}
+
+# ---------------------------------------------------------------------------
+# Oracle on-prem to Cloud migration programme - 14 fictional milestones.
+# Status as of 13-Nov-2026: early phases complete, a few mid-programme items
+# slipping, later phases on track. Forecast Date = actual date once Complete.
+# ---------------------------------------------------------------------------
+AS_OF = "2026-11-13"
+PHASES = ["Fit-Gap", "Design", "Data Migration", "System Configuration",
+          "Testing (SIT)", "Testing (UAT)", "Go-Live", "Post Go-Live Support"]
+STAKEHOLDERS = ["Process Owner", "Product Owner", "Technology", "System Integrator"]
+MS_OWNER = {
+    "Process Owner": "Claire Thompson (Controller)",
+    "Product Owner": "Hannah Weiss (ERP Product Owner)",
+    "Technology": "Owen Park (Finance Systems Lead)",
+    "System Integrator": "Grace Lin (SI Lead)",
+}
+MILESTONES = [
+    # id, phase, milestone, stakeholder, planned, forecast, status, comments
+    ("M01", "Fit-Gap", "GL requirements signed off by process owners", "Process Owner",
+     "2026-03-13", "2026-03-13", "Complete", "45 GL and close requirements baselined."),
+    ("M02", "Fit-Gap", "Fit-gap report approved", "Product Owner",
+     "2026-04-03", "2026-04-08", "Complete", "Approved 3 business days late after a design-authority review."),
+    ("M03", "Design", "Chart of accounts design approved", "Process Owner",
+     "2026-05-15", "2026-05-15", "Complete", "5-segment COA with line of business as a balancing segment."),
+    ("M04", "Design", "Intercompany and allocation design approved", "Product Owner",
+     "2026-06-05", "2026-06-03", "Complete", ""),
+    ("M05", "Data Migration", "Mock data load 1 reconciled", "System Integrator",
+     "2026-07-17", "2026-07-24", "Complete", "Reconciled after mapping fixes for 6 legacy accounts."),
+    ("M06", "Data Migration", "Mock data load 2 reconciled", "System Integrator",
+     "2026-11-06", "2026-11-20", "At Risk", "Two subledger extracts arrived late from on-prem; reload scheduled."),
+    ("M07", "System Configuration", "Ledger and accounting calendar configured", "Technology",
+     "2026-08-28", "2026-08-26", "Complete", ""),
+    ("M08", "System Configuration", "Journal approval workflow configured", "Technology",
+     "2026-11-13", "2026-11-17", "At Risk", "Approval hierarchy waiting on updated HR position data."),
+    ("M09", "System Configuration", "Intercompany balancing and cross-validation rules configured", "Technology",
+     "2026-11-20", "2026-11-20", "On Track", ""),
+    ("M10", "Testing (SIT)", "SIT complete", "System Integrator",
+     "2026-12-11", "2026-12-16", "At Risk", "Start depends on mock data load 2; 5-day slip forecast."),
+    ("M11", "Testing (UAT)", "UAT sign-off by process owners", "Process Owner",
+     "2027-01-15", "2027-01-15", "On Track", "Test scripts drafted for close, intercompany and reporting."),
+    ("M12", "Go-Live", "Cutover plan approved", "Product Owner",
+     "2027-01-22", "2027-01-22", "On Track", "Go/no-go criteria agreed with the Controller."),
+    ("M13", "Go-Live", "First close in Oracle Cloud", "Process Owner",
+     "2027-02-08", "2027-02-08", "On Track", "January 2027 close, WD+5 sign-off."),
+    ("M14", "Post Go-Live Support", "Hypercare issues closed", "System Integrator",
+     "2027-03-12", "2027-03-12", "On Track", "Six-week hypercare window."),
+]
+MS_COLS = ["Milestone ID", "Phase", "Milestone", "Stakeholder", "Owner", "Planned Date",
+           "Forecast Date", "Status", "Comments"]
+
 TASK_COLS = [
     "Task ID", "Task Name", "Segment", "Category", "Owner", "Reviewer",
     "Workday Due", "Actual Completion Day", "Status", "Priority",
@@ -149,11 +202,35 @@ def validate(tasks: pd.DataFrame, risks: pd.DataFrame) -> None:
     assert set(risks["Impact"]) | set(risks["Likelihood"]) <= {"H", "M", "L"}
 
 
+def build_milestones() -> pd.DataFrame:
+    rows = [(i, ph, name, st, MS_OWNER[st], pl, fc, status, com)
+            for (i, ph, name, st, pl, fc, status, com) in MILESTONES]
+    return pd.DataFrame(rows, columns=MS_COLS)
+
+
+def validate_milestones(ms: pd.DataFrame, risks: pd.DataFrame) -> None:
+    assert 12 <= len(ms) <= 16 and ms["Milestone ID"].is_unique
+    assert set(ms["Status"]) <= {"Complete", "On Track", "At Risk", "Blocked"}
+    assert set(ms["Stakeholder"]) <= set(STAKEHOLDERS)
+    order = ms["Phase"].map(PHASES.index)
+    assert order.is_monotonic_increasing and set(ms["Phase"]) == set(PHASES), "phases out of order"
+    planned, forecast = pd.to_datetime(ms["Planned Date"]), pd.to_datetime(ms["Forecast Date"])
+    as_of = pd.Timestamp(AS_OF)
+    assert (forecast[ms["Status"] == "Complete"] <= as_of).all(), "complete milestone dated in the future"
+    assert (forecast[ms["Status"] != "Complete"] > as_of).all(), "open milestone forecast in the past"
+    linked = set(risks["Linked Milestone"]) - {""}
+    assert linked <= set(ms["Milestone ID"]) and 2 <= len(linked) <= 3
+
+
 def main() -> None:
     DATA_DIR.mkdir(exist_ok=True)
     tasks = build_tasks()
     risks = pd.DataFrame(RISKS, columns=RISK_COLS)
+    risks["Linked Milestone"] = risks["Risk ID"].map(RISK_LINKS).fillna("")
+    milestones = build_milestones()
     validate(tasks, risks)
+    validate_milestones(milestones, risks)
+    milestones.to_csv(DATA_DIR / "milestones.csv", index=False)
 
     ref = pd.DataFrame(
         [("Reportable segment", s) for s in SEGMENTS]
@@ -168,7 +245,7 @@ def main() -> None:
 
     delayed = (tasks["Status"] == "Delayed").sum()
     print(f"Wrote {len(tasks)} tasks ({delayed} delayed = {delayed/len(tasks):.0%}), "
-          f"{len(risks)} risks to {DATA_DIR}")
+          f"{len(risks)} risks, {len(milestones)} migration milestones to data/")
 
 
 if __name__ == "__main__":

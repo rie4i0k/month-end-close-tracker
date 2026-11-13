@@ -89,6 +89,19 @@ def rng(col: str, last: int) -> str:
     return f"{CAL}!${col}${CAL_FIRST}:${col}${last}"
 
 
+# Migration Milestones geometry
+MS = "'Migration Milestones'"
+MS_HDR_ROW = 4
+MS_FIRST = 5
+DATE_FMT = "DD-MMM-YYYY"
+MS_STATUSES = ["Complete", "On Track", "At Risk", "Blocked"]
+RAG_CHART = {"Green": "3C9A5F", "Amber": "E0A030", "Red": "C8553D"}
+
+
+def ms_rng(col: str, last: int) -> str:
+    return f"{MS}!${col}${MS_FIRST}:${col}${last}"
+
+
 def style_header(ws, row, c1, c2):
     for c in range(c1, c2 + 1):
         cell = ws.cell(row=row, column=c)
@@ -232,10 +245,10 @@ def build_calendar(ws, tasks: pd.DataFrame, as_of_ref: str) -> int:
 # ---------------------------------------------------------------------------
 # Sheet 1: Leadership Summary
 # ---------------------------------------------------------------------------
-def build_summary(ws, segments, last):
+def build_summary(ws, segments, last, ms_last, phases):
     title_block(ws, "Month-End Close Tracker – Leadership Summary",
                 f"{COMPANY} · {PERIOD} · Card issuer close simulation", 12)
-    ws.merge_cells("A3:L3")
+    ws.merge_cells("A3:Q3")
     ws["A3"] = DISCLAIMER
     ws["A3"].font = Font(name=FONT, size=9, italic=True, bold=True, color="9C1C10")
     ws["A3"].alignment = Alignment(wrap_text=True, vertical="center")
@@ -298,12 +311,80 @@ def build_summary(ws, segments, last):
     ws["A13"] = ("RAG rule: Red if % delayed ≥ C8; Amber if ≥ C7; otherwise Green. "
                  "High-priority open = High priority and Status ≠ Complete.")
     ws["A13"].font = F_NOTE
-    ws["L12"] = f'=COUNTIFS({PRI},"High",{STATUS},"Delayed")'
-    ws["L11"] = "of which high-priority delayed"
-    ws["L11"].font = Font(name=FONT, size=9, bold=True, color=MUTED)
-    ws["L11"].alignment = CENTER
-    ws["L12"].font = Font(name=FONT, size=16, bold=True, color="9C1C10")
-    ws["L12"].alignment = CENTER
+    ws["A14"] = "of which high-priority delayed:"
+    ws["A14"].font = Font(name=FONT, size=9, bold=True, color=MUTED)
+    ws["C14"] = f'=COUNTIFS({PRI},"High",{STATUS},"Delayed")'
+    ws["C14"].font = Font(name=FONT, size=11, bold=True, color="9C1C10")
+    ws["C14"].alignment = Alignment(horizontal="center")
+
+    # --- Migration Programme Status (Oracle on-prem to Cloud) --------------
+    MSS, MSR, MSP = ms_rng("H", ms_last), ms_rng("J", ms_last), ms_rng("B", ms_last)
+    ws["L10"] = "Migration Programme Status"
+    ws["L10"].font = F_SECTION
+    prog = [  # tiles L..Q, row 11 label / row 12 value - same style as the close KPIs
+        ("L", "Total milestones", f"=COUNTA({ms_rng('A', ms_last)})", "0"),
+        ("M", "Complete", f'=COUNTIFS({MSS},"Complete")', "0"),
+        ("N", "On track", f'=COUNTIFS({MSS},"On Track")', "0"),
+        ("O", "At risk", f'=COUNTIFS({MSS},"At Risk")', "0"),
+        ("P", "Red / late", f'=COUNTIFS({MSR},"Red")', "0"),
+        ("Q", "% complete", "=IFERROR(M12/L12,0)", "0%"),
+    ]
+    for col, label, f, fmt in prog:
+        lab, val = ws[f"{col}11"], ws[f"{col}12"]
+        lab.value, val.value = label, f
+        lab.font = Font(name=FONT, size=9, bold=True, color=MUTED)
+        lab.alignment = CENTER
+        val.font = Font(name=FONT, size=20, bold=True, color=INK)
+        val.alignment = CENTER
+        val.number_format = fmt
+        for c in (lab, val):
+            c.fill = FILL_PANEL
+            c.border = BORDER
+    ws.conditional_formatting.add("P12", CellIsRule(operator="greaterThan", formula=["0"],
+                                  fill=PatternFill("solid", fgColor=RAG["Red"][0], bgColor=RAG["Red"][0]),
+                                  font=Font(name=FONT, size=20, bold=True, color=RAG["Red"][1])))
+    ws.conditional_formatting.add("O12", CellIsRule(operator="greaterThan", formula=["0"],
+                                  fill=PatternFill("solid", fgColor=RAG["Amber"][0], bgColor=RAG["Amber"][0]),
+                                  font=Font(name=FONT, size=20, bold=True, color=RAG["Amber"][1])))
+    ws["L13"] = "Oracle on-prem to Cloud programme · live COUNTIFS on Migration Milestones."
+    ws["L13"].font = F_NOTE
+
+    # milestone RAG by phase (feeds the chart)
+    ph_hdr = 15
+    for c, h in enumerate(["Phase", "", "", "Green", "Amber", "Red"], 12):
+        ws.cell(row=ph_hdr, column=c, value=h)
+    ws.merge_cells(start_row=ph_hdr, start_column=12, end_row=ph_hdr, end_column=14)
+    style_header(ws, ph_hdr, 12, 17)
+    for i, ph in enumerate(phases):
+        r = ph_hdr + 1 + i
+        ws.merge_cells(start_row=r, start_column=12, end_row=r, end_column=14)
+        ws.cell(row=r, column=12, value=ph)
+        for j, rag in enumerate(["Green", "Amber", "Red"]):
+            ws.cell(row=r, column=15 + j, value=f'=COUNTIFS({MSP},$L{r},{MSR},"{rag}")')
+    ph_last = ph_hdr + len(phases)
+    style_body(ws, ph_hdr + 1, ph_last, 12, 17)
+    for r in range(ph_hdr + 1, ph_last + 1):
+        for c in range(15, 18):
+            ws.cell(row=r, column=c).alignment = Alignment(horizontal="center")
+
+    ms_chart = BarChart()
+    ms_chart.type = "bar"
+    ms_chart.grouping = "stacked"
+    ms_chart.overlap = 100
+    ms_chart.gapWidth = 50
+    ms_chart.title = "Migration milestones: RAG by phase"
+    ms_chart.add_data(Reference(ws, min_col=15, max_col=17, min_row=ph_hdr, max_row=ph_last),
+                      titles_from_data=True)
+    ms_chart.set_categories(Reference(ws, min_col=12, min_row=ph_hdr + 1, max_row=ph_last))
+    for s_, rag in zip(ms_chart.series, ["Green", "Amber", "Red"]):
+        s_.graphicalProperties.solidFill = RAG_CHART[rag]
+        s_.graphicalProperties.line.solidFill = RAG_CHART[rag]
+    finish_chart(ms_chart, y_title="Milestones")
+    ms_chart.x_axis.scaling.orientation = "maxMin"
+    ms_chart.y_axis.crosses = "max"
+    ms_chart.y_axis.majorUnit = 1
+    ms_chart.height, ms_chart.width = 9, 14.5
+    ws.add_chart(ms_chart, f"L{ph_last + 2}")
 
     # --- status by segment table --------------------------------------------
     t1 = 15
@@ -381,8 +462,8 @@ def build_summary(ws, segments, last):
     finish_chart(bar, y_title="Tasks")
     bar.x_axis.scaling.orientation = "maxMin"  # segment order top-to-bottom
     bar.y_axis.crosses = "max"  # keep value axis at the bottom when reversed
-    bar.height, bar.width = 8.5, 17
-    ws.add_chart(bar, "J15")
+    bar.height, bar.width = 8.5, 12.6
+    ws.add_chart(bar, f"A{wd_last + 3}")
 
     line = LineChart()
     line.title = "Planned vs actual completion by workday"
@@ -401,11 +482,11 @@ def build_summary(ws, segments, last):
         s.smooth = False
     finish_chart(line, x_title="Close workday", y_title="Cumulative tasks")
     line.x_axis.number_format = WD_FMT
-    line.height, line.width = 8.5, 17
-    ws.add_chart(line, "J33")
+    line.height, line.width = 8.5, 12.6
+    ws.add_chart(line, f"F{wd_last + 3}")
 
     widths = {"A": 16, "B": 16, "C": 13, "D": 13, "E": 13, "F": 13, "G": 13, "H": 13,
-              "I": 13, "J": 13, "K": 4, "L": 16}
+              "I": 13, "J": 13, "K": 4, "L": 12, "M": 12, "N": 12, "O": 11, "P": 11, "Q": 11}
     for k, v in widths.items():
         ws.column_dimensions[k].width = v
     ws.freeze_panes = "A5"
@@ -414,14 +495,85 @@ def build_summary(ws, segments, last):
 
 
 # ---------------------------------------------------------------------------
+# Sheet: Migration Milestones (Oracle on-prem to Cloud programme)
+# ---------------------------------------------------------------------------
+def build_milestones(ws, ms: pd.DataFrame) -> int:
+    title_block(ws, "Migration Milestones",
+                f"{COMPANY} · Oracle on-premises to Oracle Cloud GL migration programme (fictional) · "
+                "status as of 13-Nov-2026", 11)
+    ws["A3"] = ("Days Variance = Forecast Date - Planned Date. RAG: Red if Blocked or more than 5 days late · "
+                "Green if Complete or not late · Amber if 1-5 days late. Edit blue cells (dates, status).")
+    ws["A3"].font = F_NOTE
+    cols = ["Milestone ID", "Phase", "Milestone", "Stakeholder", "Owner", "Planned Date",
+            "Forecast Date", "Status", "Days Variance", "RAG", "Comments"]
+    for c, h in enumerate(cols, 1):
+        ws.cell(row=MS_HDR_ROW, column=c, value=h)
+    style_header(ws, MS_HDR_ROW, 1, len(cols))
+    ws.row_dimensions[MS_HDR_ROW].height = 30
+    for i, m in enumerate(ms.itertuples(index=False)):
+        r = MS_FIRST + i
+        vals = [m[0], m[1], m[2], m[3], m[4], m[5].to_pydatetime(), m[6].to_pydatetime(), m[7]]
+        for c, v in enumerate(vals, 1):
+            ws.cell(row=r, column=c, value=v)
+        ws.cell(row=r, column=9, value=f"=G{r}-F{r}")
+        ws.cell(row=r, column=10, value=(
+            f'=IF(H{r}="Blocked","Red",IF(OR(H{r}="Complete",I{r}<=0),"Green",IF(I{r}<=5,"Amber","Red")))'))
+        ws.cell(row=r, column=11, value=m[8] if isinstance(m[8], str) and m[8] else None)
+    last = MS_FIRST + len(ms) - 1
+    style_body(ws, MS_FIRST, last, 1, len(cols), wrap_cols=(3, 5, 11))
+    for r in range(MS_FIRST, last + 1):
+        ws.row_dimensions[r].height = 30
+        for c in (6, 7):
+            ws.cell(row=r, column=c).number_format = DATE_FMT
+            ws.cell(row=r, column=c).font = F_INPUT
+        ws.cell(row=r, column=8).font = F_INPUT
+        ws.cell(row=r, column=9).number_format = '+0;-0;0'
+        for c in (1, 6, 7, 8, 9, 10):
+            ws.cell(row=r, column=c).alignment = Alignment(horizontal="center", vertical="top")
+    # phase banding in teal-tinted panel for readability
+    prev, shade = None, False
+    for r in range(MS_FIRST, last + 1):
+        ph = ws.cell(row=r, column=2).value
+        if ph != prev:
+            shade, prev = not shade, ph
+        if shade:
+            for c in (1, 2, 3, 4, 5, 11):
+                ws.cell(row=r, column=c).fill = FILL_PANEL
+    rag_rules(ws, f"J{MS_FIRST}:J{last}", f"$J{MS_FIRST}")
+    status_rag = {"Complete": "Green", "At Risk": "Amber", "Blocked": "Red"}
+    for status, rag in status_rag.items():
+        bg, fg = RAG[rag]
+        ws.conditional_formatting.add(
+            f"H{MS_FIRST}:H{last}",
+            CellIsRule(operator="equal", formula=[f'"{status}"'],
+                       fill=PatternFill("solid", fgColor=bg, bgColor=bg),
+                       font=Font(name=FONT, color=fg, bold=True)))
+    ws.conditional_formatting.add(
+        f"I{MS_FIRST}:I{last}",
+        CellIsRule(operator="greaterThan", formula=["0"], font=Font(name=FONT, color="9C1C10", bold=True)))
+    dv = DataValidation(type="list", formula1='"' + ",".join(MS_STATUSES) + '"')
+    ws.add_data_validation(dv)
+    dv.add(f"H{MS_FIRST}:H{last}")
+    dvs = DataValidation(type="list", formula1='"Process Owner,Product Owner,Technology,System Integrator"')
+    ws.add_data_validation(dvs)
+    dvs.add(f"D{MS_FIRST}:D{last}")
+    for c, w in enumerate([11, 19, 40, 16, 26, 13, 13, 11, 10, 9, 46], 1):
+        ws.column_dimensions[get_column_letter(c)].width = w
+    ws.freeze_panes = ws.cell(row=MS_FIRST, column=4)
+    ws.auto_filter.ref = f"A{MS_HDR_ROW}:K{last}"
+    fit_landscape(ws, tall=1)
+    return last
+
+
+# ---------------------------------------------------------------------------
 # Sheet 3: Risk Log
 # ---------------------------------------------------------------------------
-def build_risks(ws, risks: pd.DataFrame):
+def build_risks(ws, risks: pd.DataFrame, ms_last: int):
     title_block(ws, "Close Risk Log", f"{COMPANY} · risks to the {PERIOD}", 9)
     ws["A3"] = "Score = Impact × Likelihood (H = 3, M = 2, L = 1). RAG: Red ≥ 6 · Amber 3–4 · Green ≤ 2. Edit blue cells (H/M/L)."
     ws["A3"].font = F_NOTE
     cols = ["Risk ID", "Description", "Impact", "Likelihood", "Risk Score", "Risk RAG",
-            "Owner", "Mitigation", "Status"]
+            "Owner", "Mitigation", "Status", "Linked Milestone", "Milestone RAG"]
     hdr = 4
     for c, h in enumerate(cols, 1):
         ws.cell(row=hdr, column=c, value=h)
@@ -439,16 +591,22 @@ def build_risks(ws, risks: pd.DataFrame):
         ws.cell(row=r, column=7, value=rk[4])
         ws.cell(row=r, column=8, value=rk[5])
         ws.cell(row=r, column=9, value=rk[6])
+        link = rk[7] if isinstance(rk[7], str) and rk[7] else None
+        if link:
+            ws.cell(row=r, column=10, value=link)
+            ws.cell(row=r, column=11, value=(
+                f'=IFERROR(INDEX({ms_rng("J", ms_last)},MATCH(J{r},{ms_rng("A", ms_last)},0)),"")'))
     last = hdr + len(risks)
     style_body(ws, hdr + 1, last, 1, len(cols), wrap_cols=(2, 8))
     for r in range(hdr + 1, last + 1):
         ws.row_dimensions[r].height = 42
-        for c in (1, 3, 4, 5, 6, 9):
+        for c in (1, 3, 4, 5, 6, 9, 10, 11):
             ws.cell(row=r, column=c).alignment = Alignment(horizontal="center", vertical="top")
         ws.cell(row=r, column=3).font = F_INPUT
         ws.cell(row=r, column=4).font = F_INPUT
     rag_rules(ws, f"F{hdr+1}:F{last}", f"$F{hdr+1}")
     rag_rules(ws, f"E{hdr+1}:E{last}", f"$F{hdr+1}")
+    rag_rules(ws, f"K{hdr+1}:K{last}", f"$K{hdr+1}")
     dv = DataValidation(type="list", formula1='"H,M,L"')
     ws.add_data_validation(dv)
     dv.add(f"C{hdr+1}:D{last}")
@@ -473,11 +631,14 @@ def build_risks(ws, risks: pd.DataFrame):
         c.number_format = "0.0" if "Average" in label else "0"
         c.alignment = Alignment(horizontal="center")
 
-    for c, w in enumerate([8, 50, 9, 11, 10, 10, 16, 52, 12], 1):
+    for c, w in enumerate([8, 50, 9, 11, 10, 10, 16, 52, 12, 11, 11], 1):
         ws.column_dimensions[get_column_letter(c)].width = w
     ws.freeze_panes = "C5"
     fit_landscape(ws, tall=1)
-    ws.auto_filter.ref = f"A{hdr}:I{last}"
+    ws.auto_filter.ref = f"A{hdr}:K{last}"
+    ws.cell(row=last + 8, column=1,
+            value="Linked Milestone: the migration milestone this risk threatens. Milestone RAG is looked up "
+                  "live from the Migration Milestones sheet.").font = F_NOTE
     return hdr + 1, last
 
 
@@ -630,6 +791,7 @@ def build_about(ws, ref: pd.DataFrame):
         ("Risks", "All 8 risks, ratings, mitigations and statuses."),
         ("Balances", "The workbook contains no real balances or amounts. Any amounts referenced in comments are fictional."),
         ("Systems context", "The Oracle on-prem to Oracle Cloud transition is a hypothetical scenario for this portfolio piece."),
+        ("Migration milestones", "All 14 milestones, phases, stakeholders, owners, dates, statuses and comments."),
     ]
     for c, h in enumerate(["Area", "What is fictional", "", ""], 1):
         ws.cell(row=r, column=c, value=h)
@@ -664,7 +826,10 @@ def main() -> None:
     tasks = pd.read_csv(DATA_DIR / "close_tasks.csv", keep_default_na=False,
                         na_values={"Actual Completion Day": [""]})
     tasks["Actual Completion Day"] = tasks["Actual Completion Day"].astype("Int64")
-    risks = pd.read_csv(DATA_DIR / "risk_log.csv")
+    risks = pd.read_csv(DATA_DIR / "risk_log.csv", keep_default_na=False)
+    ms = pd.read_csv(DATA_DIR / "milestones.csv", keep_default_na=False,
+                     parse_dates=["Planned Date", "Forecast Date"])
+    phases = list(dict.fromkeys(ms["Phase"]))
     ref = pd.read_csv(DATA_DIR / "reference_structure.csv")
 
     segments = ref.loc[ref["Element"] == "Reportable segment", "Name (as written in 10-K)"].tolist()
@@ -675,19 +840,21 @@ def main() -> None:
     ws_sum = wb.active
     ws_sum.title = "Leadership Summary"
     ws_cal = wb.create_sheet("Close Calendar")
+    ws_ms = wb.create_sheet("Migration Milestones")
     ws_risk = wb.create_sheet("Risk Log")
     ws_own = wb.create_sheet("Owner View")
     ws_about = wb.create_sheet("About & Sources")
 
     last = build_calendar(ws_cal, tasks, "'Leadership Summary'!$C$6")
-    build_summary(ws_sum, segments, last)
-    build_risks(ws_risk, risks)
+    ms_last = build_milestones(ws_ms, ms)
+    build_summary(ws_sum, segments, last, ms_last, phases)
+    build_risks(ws_risk, risks, ms_last)
     build_owner(ws_own, owners, last)
     build_about(ws_about, ref)
 
     ws_sum["C6"].comment = Comment("Input: current close workday (WD0 = last business day). "
                                    "Default WD+2 for this simulation.", "Close Tracker")
-    for ws, colour in ((ws_sum, SLATE), (ws_cal, TEAL), (ws_risk, "9C1C10"),
+    for ws, colour in ((ws_sum, SLATE), (ws_cal, TEAL), (ws_ms, TEAL), (ws_risk, "9C1C10"),
                        (ws_own, TEAL), (ws_about, MUTED)):
         ws.sheet_properties.tabColor = colour
 
